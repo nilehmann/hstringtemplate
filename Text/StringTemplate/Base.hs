@@ -338,9 +338,18 @@ comlist p = spaced (p `sepBy1` spaced (char ','))
 props :: Stringable a => TmplParser [SEnv a -> SElem a]
 props = many $ char '.' >> (around '(' subexprn ')' <|> justSTR <$> word)
 
-escapedChar, escapedStr :: String -> GenParser Char st String
-escapedChar chs =
-    noneOf chs >>= \x -> if x == '\\' then anyChar >>= \y -> return [y] else return [x]
+escapedSequences :: M.Map Char String
+escapedSequences = M.fromList [('n', "\n")]
+
+escapedChar :: String -> GenParser Char st String
+escapedChar chs = do
+    x <- noneOf chs
+    if x == '\\'
+      then do
+        y <- anyChar
+        return $ fromMaybe [y] $ M.lookup y escapedSequences
+      else return [x]
+escapedStr :: String -> GenParser Char st String
 escapedStr chs = concat <$> many1 (escapedChar chs)
 
 {-
